@@ -86,8 +86,6 @@ Four models were trained with `class_weight='balanced'` / `scale_pos_weight` to 
 Used `GridSearchCV` with `cv=5` and `scoring='recall'`:
 
 
-```
-
 **Result:** Recall improved from **0.69 → 0.80** (+11%)
 
 ---
