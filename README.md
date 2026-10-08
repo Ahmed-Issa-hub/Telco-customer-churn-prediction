@@ -72,18 +72,23 @@ Categorical variables were encoded before modeling, and numerical model inputs w
 
 ---
 
-## Baseline Models
+## Baseline Model Comparison
 
-The notebook compares four classification approaches on the same stratified train/test split:
+Four classification models were evaluated on the same stratified train/test split. Class imbalance was handled using `class_weight='balanced'` for supported scikit-learn models and `scale_pos_weight` for XGBoost.
 
-- Logistic Regression
-- Decision Tree
-- Random Forest
-- XGBoost
+| Model | Accuracy | Precision (Churn) | Recall (Churn) | F1 (Churn) |
+|---|---:|---:|---:|---:|
+| Logistic Regression | 0.739 | 0.505 | **0.781** | **0.613** |
+| XGBoost | 0.754 | 0.527 | 0.693 | 0.599 |
+| Decision Tree | 0.737 | 0.504 | 0.497 | 0.501 |
+| Random Forest | **0.792** | **0.642** | 0.489 | 0.555 |
 
-Class imbalance is handled using `class_weight='balanced'` for supported scikit-learn models and `scale_pos_weight` for XGBoost.
+### Baseline interpretation
 
-The notebook reports Accuracy, Precision, Recall, and F1-score for the churn class so model selection is not based on accuracy alone.
+- **Logistic Regression** produced the strongest baseline recall for the churn class (0.781).
+- **Random Forest** achieved the highest baseline accuracy and precision, but its lower recall meant it missed more true churners.
+- Baseline **XGBoost** achieved 0.693 recall. Hyperparameter tuning was then used to optimize XGBoost specifically for churn recall.
+- Model selection was therefore based on the business objective and class-specific metrics rather than overall accuracy alone.
 
 ---
 
@@ -95,7 +100,9 @@ The XGBoost model is tuned with `GridSearchCV` using:
 - `scoring='recall'`
 - candidate values for `n_estimators`, `max_depth`, `learning_rate`, and `subsample`
 
-The previously evaluated tuned model achieved approximately:
+After tuning, XGBoost improved churn recall from **0.693 to 0.805**, slightly exceeding the Logistic Regression baseline recall of 0.781.
+
+The tuned XGBoost model achieved approximately:
 
 - **Recall (churn): 0.80**
 - **Precision (churn): 0.51**
