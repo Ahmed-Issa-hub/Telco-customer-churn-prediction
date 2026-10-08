@@ -1,149 +1,167 @@
 # 📉 Telco Customer Churn Prediction
 
-A machine learning project that predicts whether a telecom customer will churn, built end-to-end from data exploration to a deployed Streamlit application.
+An end-to-end machine learning portfolio project for identifying telecom customers at higher risk of churn, from exploratory analysis and feature engineering through model tuning, explainability, and a Streamlit prediction prototype.
 
 ---
 
-## 🔍 Problem Statement
+## Business Problem
 
-Customer churn is one of the most critical challenges in the telecom industry. Losing a customer costs significantly more than retaining one. This project builds a model that identifies customers likely to churn **before** they leave, enabling proactive retention strategies.
+Customer churn can create significant revenue pressure for subscription businesses. The objective of this project is to identify customers at higher risk of leaving so retention teams could prioritize proactive interventions.
 
-**Key Question:** Given a customer's contract details, services, and billing information — will they churn?
+**Key question:** Given a customer's contract, services, tenure, and billing characteristics, can we identify whether that customer is at higher risk of churn?
 
 ---
 
-## 📊 Dataset
+## Dataset
 
 - **Source:** IBM Telco Customer Churn Dataset
-- **Size:** 7,043 customers × 21 features
-- **Target:** `Churn` (Yes / No) — 23.4% churn rate (imbalanced)
+- **Size:** 7,043 customer records
+- **Columns:** 21 columns including the target variable
+- **Target:** `Churn` (Yes / No)
+- **Observed churn rate:** approximately **26.5%**
 
 ---
 
-## 🧪 Project Pipeline
+## Project Workflow
 
 ```
-Data Loading & Cleaning
-        ↓
-Exploratory Data Analysis (EDA)
-        ↓
+Data Cleaning
+      ↓
+Exploratory Data Analysis
+      ↓
 Feature Engineering
-        ↓
-Model Training & Comparison
-        ↓
-Hyperparameter Tuning (GridSearchCV)
-        ↓
-Model Explainability (SHAP)
-        ↓
-Streamlit Deployment
+      ↓
+Encoding & Scaling
+      ↓
+Stratified Train/Test Split
+      ↓
+Baseline Model Comparison
+      ↓
+Class-Imbalance Handling
+      ↓
+XGBoost Hyperparameter Tuning
+      ↓
+Model Evaluation
+      ↓
+SHAP Explainability
+      ↓
+Streamlit Prototype
 ```
 
 ---
 
-## 📈 Exploratory Data Analysis — Key Findings
+## Key EDA Findings
 
-| Feature | Insight |
-|---|---|
-| **Contract Type** | Month-to-month customers churn at **37%** vs 6% for two-year contracts |
-| **Internet Service** | Fiber optic customers churn **6% more** than DSL customers |
-| **Tenure** | Customers who churned had avg tenure of **18 months** vs 37 months for retained |
-| **Monthly Charges** | Churned customers paid avg **$74/month** vs $61 for retained |
+- Month-to-month customers showed substantially higher churn than customers on longer contracts.
+- Fiber-optic customers showed higher churn than DSL customers.
+- Customers who churned had shorter average tenure.
+- Customers who churned had higher average monthly charges.
 
----
-
-## ⚙️ Feature Engineering
-
-Two new features were created based on EDA insights:
-
-- **`TotalServices`** — Total number of add-on services subscribed (e.g. StreamingTV, OnlineBackup...)
-- **`Billing_average`** — Average monthly spend relative to tenure (`TotalCharges / tenure`)
-
-Encoding strategy:
-- **Label Encoding** → `Contract` (ordinal: Month-to-month < One year < Two year)
-- **One-Hot Encoding** → `InternetService`, `PaymentMethod`, and all other categorical features
+These are associations observed in the dataset and should not be interpreted as causal effects.
 
 ---
 
-## 🤖 Model Comparison
+## Feature Engineering
 
-Four models were trained with `class_weight='balanced'` / `scale_pos_weight` to handle class imbalance:
+Two additional features were created:
 
-| Model | Recall (Churn) | F1 (Churn) |
-|---|---|---|
-| Logistic Regression | 0.78 | 0.61 |
-| Decision Tree | 0.79 | 0.63 |
-| Random Forest | 0.71 | 0.62 |
-| **XGBoost (selected)** | **0.69 → 0.80*** | **0.62** |
+- **`TotalServices`** — number of subscribed telecom/add-on services.
+- **`Billing_average`** — total charges divided by tenure, with zero-tenure handling.
 
-*After Hyperparameter Tuning via GridSearchCV
-
-> **Why Recall?** In churn prediction, missing a customer who will leave (False Negative) is more costly than a false alarm. Recall was chosen as the primary metric.
+Categorical variables were encoded before modeling, and numerical model inputs were standardized using `StandardScaler`.
 
 ---
 
-## 🔧 Hyperparameter Tuning
+## Baseline Model Comparison
 
-Used `GridSearchCV` with `cv=5` and `scoring='recall'`:
+Four classification models were evaluated on the same stratified train/test split. Class imbalance was handled using `class_weight='balanced'` for supported scikit-learn models and `scale_pos_weight` for XGBoost.
 
+| Model | Accuracy | Precision (Churn) | Recall (Churn) | F1 (Churn) |
+|---|---:|---:|---:|---:|
+| Logistic Regression | 0.739 | 0.505 | **0.781** | **0.613** |
+| XGBoost | 0.754 | 0.527 | 0.693 | 0.599 |
+| Decision Tree | 0.737 | 0.504 | 0.497 | 0.501 |
+| Random Forest | **0.792** | **0.642** | 0.489 | 0.555 |
 
-**Result:** Recall improved from **0.69 → 0.80** (+11%)
+### Baseline interpretation
 
----
-
-## 🧠 Model Explainability — SHAP Values
-
-SHAP (SHapley Additive exPlanations) was used to explain model decisions globally and per customer.
-
-**Top 3 most influential features:**
-1. `Contract` — Month-to-month contracts strongly push toward churn
-2. `InternetService_Fiber optic` — Fiber optic users are higher risk
-3. `tenure` — Shorter tenure increases churn probability
-
----
-
-## 🚀 Streamlit App
-
-An interactive web app that takes customer details as input and predicts churn in real time.
-
-**Input features:**
-- Contract type
-- Internet service type
-- Payment method
-- Tenure (months)
-- Monthly charges
-
-**Output:**
-- ✅ Customer is likely to stay
-- ⚠️ Customer is likely to churn
+- **Logistic Regression** produced the strongest baseline recall for the churn class (0.781).
+- **Random Forest** achieved the highest baseline accuracy and precision, but its lower recall meant it missed more true churners.
+- Baseline **XGBoost** achieved 0.693 recall. Hyperparameter tuning was then used to optimize XGBoost specifically for churn recall.
+- Model selection was therefore based on the business objective and class-specific metrics rather than overall accuracy alone.
 
 ---
 
-## 🗂️ Repository Structure
+## XGBoost Hyperparameter Tuning
+
+The XGBoost model is tuned with `GridSearchCV` using:
+
+- 5-fold cross-validation
+- `scoring='recall'`
+- candidate values for `n_estimators`, `max_depth`, `learning_rate`, and `subsample`
+
+After tuning, XGBoost improved churn recall from **0.693 to 0.805**, slightly exceeding the Logistic Regression baseline recall of 0.781.
+
+The tuned XGBoost model achieved approximately:
+
+- **Recall (churn): 0.80**
+- **Precision (churn): 0.51**
+- **F1-score (churn): 0.62**
+- **Cross-validation recall: ~0.82**
+
+On the held-out test set, the confusion matrix was:
+
+- True Negatives: 740
+- False Positives: 295
+- False Negatives: 73
+- True Positives: 301
+
+### Why prioritize recall?
+
+In this business framing, failing to identify a customer who will actually churn (a false negative) may be more costly than contacting some customers who would have stayed. Recall is therefore treated as the primary tuning metric, while Precision and F1-score are still monitored because higher recall increases false positives.
+
+---
+
+## Model Explainability
+
+SHAP is used with `TreeExplainer` to examine:
+
+- global feature influence through a summary plot
+- individual predictions through a waterfall plot
+
+This helps connect model behavior back to customer and service characteristics instead of treating the model as a black box.
+
+---
+
+## Streamlit Prototype
+
+The repository includes an interactive Streamlit prototype for customer-level churn prediction.
+
+The app collects the customer fields required to reconstruct the engineered and encoded feature vector used by the trained model, including customer profile, telecom services, contract type, tenure, and billing information.
+
+The application is a **portfolio prototype**, not a production decision system. The displayed model score is not probability-calibrated.
+
+---
+
+## Repository Structure
 
 ```
-📁 telco-customer-churn-prediction
-├── Telco_Customer_Churn.ipynb   # Full analysis notebook
-├── app.py                        # Streamlit application
-├── churn_model.pkl               # Trained XGBoost model
-├── scaler.pkl                    # Fitted StandardScaler
-├── feature_columns.pkl           # Feature column names
+Telco-customer-churn-prediction/
+├── Data.csv
+├── Telco Customer Churn.ipynb
+├── app.py
+├── churn_model.pkl
+├── scaler.pkl
+├── feature_columns.pkl
 └── README.md
 ```
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
-
-- **Data:** pandas, numpy
-- **Modeling:** scikit-learn, XGBoost
+- **Data Analysis:** pandas, numpy
+- **Machine Learning:** scikit-learn, XGBoost
 - **Explainability:** SHAP
-- **Deployment:** Streamlit
 - **Visualization:** matplotlib, seaborn
-
----
-
-## 👤 Author
-
-
-[LinkedIn](https://www.linkedin.com/in/ahmed-eissa-837691a1/)
+- **Prototype Deployment:** Streamlit
